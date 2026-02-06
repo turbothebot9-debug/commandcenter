@@ -3,736 +3,242 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⌘ COMMAND CENTER</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<title>COMMAND CENTER</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0a;--card:rgba(0,255,65,0.03);--border:rgba(0,255,65,0.15);--green:#00ff41;--cyan:#0ff;--dim:#1a3a1a;--text:#c0ffc0;--muted:#3a7a3a}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 
-  :root {
-    --bg: #0a0a0a;
-    --green: #00ff41;
-    --green-dim: #00cc33;
-    --green-dark: #003300;
-    --cyan: #0ff;
-    --cyan-dim: #088;
-    --card-bg: rgba(0, 255, 65, 0.03);
-    --card-border: rgba(0, 255, 65, 0.25);
-    --card-glow: rgba(0, 255, 65, 0.08);
-    --text: #b0ffb0;
-    --text-dim: #446644;
-    --danger: #ff3333;
-  }
+/* Scanline overlay */
+body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+pointer-events:none;z-index:9999;
+background:repeating-linear-gradient(0deg,rgba(0,0,0,0.03) 0px,rgba(0,0,0,0.03) 1px,transparent 1px,transparent 2px)}
 
-  body {
-    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-    position: relative;
-  }
+/* Matrix rain canvas */
+#matrix-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:0.07}
+.main{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:20px}
 
-  /* Matrix Rain Canvas */
-  #matrix-canvas {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 0;
-    opacity: 0.12;
-    pointer-events: none;
-  }
+/* ASCII Header */
+.ascii-header{text-align:center;padding:20px 0 10px;color:var(--green);font-size:clamp(6px,1.5vw,12px);line-height:1.2;white-space:pre;overflow:hidden;text-shadow:0 0 10px rgba(0,255,65,0.5)}
 
-  /* Scanline Overlay */
-  .scanlines {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 1;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.15) 2px,
-      rgba(0, 0, 0, 0.15) 4px
-    );
-  }
+/* Boot sequence */
+.boot-log{text-align:center;padding:0 0 20px;font-size:11px;color:var(--muted)}
+.boot-log span{display:inline-block;opacity:0;animation:fadeIn 0.3s forwards}
+@keyframes fadeIn{to{opacity:1}}
 
-  /* Boot Sequence */
-  #boot-screen {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 9999;
-    background: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    transition: opacity 0.8s ease, visibility 0.8s ease;
-  }
-  #boot-screen.hidden {
-    opacity: 0;
-    visibility: hidden;
-  }
-  #boot-text {
-    font-size: 14px;
-    color: var(--green);
-    white-space: pre-wrap;
-    max-width: 600px;
-    line-height: 1.6;
-  }
-  .cursor-blink {
-    animation: blink 0.7s step-end infinite;
-  }
-  @keyframes blink {
-    50% { opacity: 0; }
-  }
+/* Grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}
+.grid-full{grid-column:1/-1}
 
-  /* Main Content */
-  #app {
-    position: relative;
-    z-index: 2;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 20px;
-    opacity: 0;
-    transition: opacity 0.6s ease;
-  }
-  #app.visible { opacity: 1; }
+/* Card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;
+backdrop-filter:blur(4px);transition:border-color 0.3s,box-shadow 0.3s}
+.card:hover{border-color:rgba(0,255,65,0.35);box-shadow:0 0 20px rgba(0,255,65,0.05)}
+.card h2{color:var(--green);font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;
+display:flex;align-items:center;gap:8px;text-shadow:0 0 8px rgba(0,255,65,0.3)}
+.card h2 .icon{font-size:16px}
 
-  /* ASCII Header */
-  .ascii-header {
-    text-align: center;
-    margin-bottom: 10px;
-    overflow: hidden;
-  }
-  .ascii-header pre {
-    font-size: clamp(5px, 1.2vw, 12px);
-    line-height: 1.15;
-    color: var(--green);
-    text-shadow: 0 0 10px var(--green), 0 0 30px rgba(0,255,65,0.3);
-    display: inline-block;
-  }
-  .tagline {
-    text-align: center;
-    color: var(--cyan);
-    font-size: 12px;
-    letter-spacing: 6px;
-    text-transform: uppercase;
-    margin-bottom: 24px;
-    text-shadow: 0 0 8px var(--cyan);
-  }
+/* Clock */
+.clock-display{text-align:center;padding:10px 0}
+.clock-time{font-size:clamp(36px,6vw,64px);font-weight:700;color:var(--green);
+text-shadow:0 0 30px rgba(0,255,65,0.4),0 0 60px rgba(0,255,65,0.15);letter-spacing:4px}
+.clock-seconds{font-size:clamp(18px,3vw,28px);color:var(--cyan);vertical-align:super;margin-left:4px}
+.clock-date{font-size:14px;color:var(--muted);margin-top:8px}
+.clock-day{color:var(--cyan);font-weight:600}
 
-  /* Glow Text */
-  .glow {
-    text-shadow: 0 0 6px var(--green), 0 0 15px rgba(0,255,65,0.4);
-  }
-  .glow-cyan {
-    color: var(--cyan);
-    text-shadow: 0 0 6px var(--cyan), 0 0 15px rgba(0,255,255,0.4);
-  }
+/* Weather */
+.weather-main{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+.weather-temp{font-size:32px;color:var(--green);font-weight:700}
+.weather-desc{font-size:13px;color:var(--text)}
+.weather-location{font-size:11px;color:var(--muted)}
+.forecast{display:flex;gap:12px;margin-top:12px}
+.forecast-day{flex:1;text-align:center;padding:8px;background:rgba(0,255,65,0.02);border:1px solid rgba(0,255,65,0.08);border-radius:6px}
+.forecast-day .day{font-size:11px;color:var(--muted)}
+.forecast-day .temp{font-size:16px;color:var(--green);margin:4px 0}
+.forecast-day .icon{font-size:20px}
 
-  /* Card System */
-  .card {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 8px;
-    padding: 20px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 0 15px var(--card-glow), inset 0 0 15px rgba(0,255,65,0.02);
-    transition: border-color 0.3s, box-shadow 0.3s;
-  }
-  .card:hover {
-    border-color: rgba(0, 255, 65, 0.5);
-    box-shadow: 0 0 25px rgba(0,255,65,0.15), inset 0 0 20px rgba(0,255,65,0.03);
-  }
-  .card-title {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    color: var(--cyan);
-    margin-bottom: 14px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(0,255,255,0.15);
-    text-shadow: 0 0 5px rgba(0,255,255,0.3);
-  }
-  .card-title::before {
-    content: '► ';
-    color: var(--green);
-  }
+/* Quick Launch */
+.launch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:10px}
+.launch-item{text-align:center;padding:12px 4px;background:rgba(0,255,65,0.02);
+border:1px solid rgba(0,255,65,0.08);border-radius:8px;cursor:pointer;
+transition:all 0.2s;text-decoration:none;color:var(--text)}
+.launch-item:hover{background:rgba(0,255,65,0.08);border-color:rgba(0,255,65,0.3);transform:translateY(-2px)}
+.launch-item .l-icon{font-size:24px;display:block;margin-bottom:6px}
+.launch-item .l-name{font-size:10px;color:var(--muted)}
+.launch-key{position:absolute;top:3px;left:6px;font-size:9px;color:var(--dim);font-weight:600}
+.launch-item{position:relative}
 
-  /* Dashboard Grid */
-  .dashboard {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-  }
-  .dashboard .card.wide { grid-column: span 2; }
-  .dashboard .card.full { grid-column: span 3; }
+/* Quote */
+.quote-text{font-size:14px;color:var(--text);line-height:1.6;font-style:italic;padding:8px 0}
+.quote-author{font-size:12px;color:var(--muted);text-align:right;margin-top:8px}
+.quote-author::before{content:'— '}
 
-  /* === CLOCK WIDGET === */
-  .clock-time {
-    font-size: clamp(36px, 5vw, 64px);
-    font-weight: 700;
-    color: var(--green);
-    text-align: center;
-    text-shadow: 0 0 15px var(--green), 0 0 40px rgba(0,255,65,0.3);
-    line-height: 1;
-  }
-  .clock-seconds {
-    font-size: 0.5em;
-    color: var(--cyan);
-    vertical-align: super;
-  }
-  .clock-date {
-    text-align: center;
-    color: var(--text-dim);
-    font-size: 13px;
-    margin-top: 8px;
-    letter-spacing: 2px;
-  }
-  .clock-day {
-    text-align: center;
-    color: var(--cyan);
-    font-size: 14px;
-    font-weight: 600;
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 4px;
-  }
+/* Countdown */
+.countdown-list{display:flex;flex-direction:column;gap:10px}
+.countdown-item{display:flex;justify-content:space-between;align-items:center;
+padding:10px 12px;background:rgba(0,255,65,0.02);border:1px solid rgba(0,255,65,0.08);border-radius:6px}
+.countdown-name{font-size:13px;color:var(--text)}
+.countdown-time{font-size:14px;color:var(--cyan);font-weight:600}
+.countdown-add{display:flex;gap:8px;margin-top:12px}
+.countdown-add input{flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--text);
+padding:8px 12px;border-radius:6px;font-family:inherit;font-size:12px}
+.countdown-add input:focus{outline:none;border-color:var(--green)}
+.countdown-add button{background:rgba(0,255,65,0.1);border:1px solid var(--border);color:var(--green);
+padding:8px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;transition:all 0.2s}
+.countdown-add button:hover{background:rgba(0,255,65,0.2)}
 
-  /* === WEATHER WIDGET === */
-  .weather-main {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 12px;
-  }
-  .weather-temp {
-    font-size: 38px;
-    font-weight: 700;
-    color: var(--green);
-    text-shadow: 0 0 10px var(--green);
-  }
-  .weather-icon {
-    font-size: 32px;
-  }
-  .weather-condition {
-    color: var(--text);
-    font-size: 13px;
-    text-align: center;
-  }
-  .weather-forecast {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 14px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(0,255,65,0.1);
-  }
-  .forecast-day {
-    text-align: center;
-    font-size: 11px;
-  }
-  .forecast-day .day-name {
-    color: var(--cyan);
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-  .forecast-day .day-temp {
-    color: var(--green);
-    font-weight: 700;
-  }
-  .forecast-day .day-low {
-    color: var(--text-dim);
-    font-size: 10px;
-  }
-  .weather-loading {
-    text-align: center;
-    color: var(--text-dim);
-    font-style: italic;
-  }
-  .weather-location {
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-top: 8px;
-  }
+/* Notes */
+.notes-area{width:100%;min-height:120px;background:rgba(0,0,0,0.3);border:1px solid var(--border);
+color:var(--text);padding:12px;border-radius:6px;font-family:inherit;font-size:13px;resize:vertical;line-height:1.6}
+.notes-area:focus{outline:none;border-color:var(--green);box-shadow:0 0 10px rgba(0,255,65,0.1)}
+.notes-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--muted)}
 
-  /* === QUICK LAUNCH === */
-  .quick-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
-  }
-  .quick-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 8px;
-    border: 1px solid rgba(0,255,65,0.12);
-    border-radius: 6px;
-    background: rgba(0,255,65,0.02);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    color: var(--text);
-    position: relative;
-  }
-  .quick-item:hover {
-    border-color: var(--green);
-    background: rgba(0,255,65,0.08);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,255,65,0.15);
-  }
-  .quick-item .icon {
-    font-size: 22px;
-  }
-  .quick-item .label {
-    font-size: 10px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-dim);
-  }
-  .quick-item .shortcut {
-    position: absolute;
-    top: 3px;
-    right: 6px;
-    font-size: 9px;
-    color: var(--cyan-dim);
-    opacity: 0.6;
-  }
+/* Network Info */
+.info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,255,65,0.06)}
+.info-row:last-child{border-bottom:none}
+.info-label{color:var(--muted);font-size:12px}
+.info-value{color:var(--cyan);font-size:12px;font-weight:600}
 
-  /* === QUOTES === */
-  .quote-text {
-    font-size: 14px;
-    color: var(--text);
-    line-height: 1.6;
-    font-style: italic;
-    min-height: 50px;
-  }
-  .quote-text::before { content: '"'; color: var(--green); font-size: 20px; }
-  .quote-text::after { content: '"'; color: var(--green); font-size: 20px; }
-  .quote-author {
-    margin-top: 10px;
-    text-align: right;
-    color: var(--cyan);
-    font-size: 12px;
-  }
-  .quote-author::before { content: '— '; }
+/* Responsive */
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr}
+  .ascii-header{font-size:5px}
+  .launch-grid{grid-template-columns:repeat(4,1fr)}
+}
 
-  /* === COUNTDOWN === */
-  .countdown-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .countdown-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    border: 1px solid rgba(0,255,65,0.1);
-    border-radius: 4px;
-    background: rgba(0,255,65,0.02);
-  }
-  .countdown-name {
-    font-size: 12px;
-    color: var(--text);
-  }
-  .countdown-value {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--green);
-    text-shadow: 0 0 6px rgba(0,255,65,0.4);
-  }
-  .countdown-value.past {
-    color: var(--text-dim);
-  }
-  .countdown-add {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .countdown-add input {
-    flex: 1;
-    background: rgba(0,0,0,0.5);
-    border: 1px solid var(--card-border);
-    color: var(--green);
-    padding: 6px 10px;
-    font-family: inherit;
-    font-size: 11px;
-    border-radius: 4px;
-    outline: none;
-  }
-  .countdown-add input:focus {
-    border-color: var(--cyan);
-    box-shadow: 0 0 5px rgba(0,255,255,0.2);
-  }
-  .countdown-add input[type="date"] {
-    color-scheme: dark;
-  }
-  .countdown-add button, .btn-sm {
-    background: rgba(0,255,65,0.1);
-    border: 1px solid var(--green-dim);
-    color: var(--green);
-    padding: 6px 14px;
-    font-family: inherit;
-    font-size: 11px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .countdown-add button:hover, .btn-sm:hover {
-    background: rgba(0,255,65,0.25);
-  }
-  .countdown-remove {
-    background: none;
-    border: none;
-    color: var(--danger);
-    cursor: pointer;
-    font-size: 14px;
-    padding: 0 4px;
-    opacity: 0.5;
-    transition: opacity 0.2s;
-  }
-  .countdown-remove:hover { opacity: 1; }
+/* Blink cursor */
+.cursor{display:inline-block;width:8px;height:14px;background:var(--green);
+animation:blink 1s step-end infinite;vertical-align:middle;margin-left:2px}
+@keyframes blink{50%{opacity:0}}
 
-  /* === NOTES === */
-  .notes-area {
-    width: 100%;
-    min-height: 120px;
-    background: rgba(0,0,0,0.5);
-    border: 1px solid var(--card-border);
-    color: var(--green);
-    padding: 12px;
-    font-family: inherit;
-    font-size: 12px;
-    line-height: 1.6;
-    border-radius: 4px;
-    resize: vertical;
-    outline: none;
-  }
-  .notes-area:focus {
-    border-color: var(--cyan);
-    box-shadow: 0 0 8px rgba(0,255,255,0.15);
-  }
-  .notes-status {
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-top: 6px;
-    text-align: right;
-  }
-
-  /* === NETWORK INFO === */
-  .net-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(0,255,65,0.06);
-    font-size: 12px;
-  }
-  .net-row:last-child { border-bottom: none; }
-  .net-label {
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 10px;
-  }
-  .net-value {
-    color: var(--green);
-    font-weight: 600;
-  }
-
-  /* === KEYBOARD SHORTCUTS HINT === */
-  .shortcuts-hint {
-    text-align: center;
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-top: 20px;
-    padding: 10px;
-    letter-spacing: 1px;
-  }
-  .shortcuts-hint kbd {
-    background: rgba(0,255,65,0.1);
-    border: 1px solid rgba(0,255,65,0.2);
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-family: inherit;
-    color: var(--cyan);
-  }
-
-  /* Status bar */
-  .status-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding: 6px 12px;
-    border: 1px solid rgba(0,255,65,0.1);
-    border-radius: 4px;
-    font-size: 10px;
-    color: var(--text-dim);
-    letter-spacing: 1px;
-  }
-  .status-dot {
-    display: inline-block;
-    width: 6px; height: 6px;
-    background: var(--green);
-    border-radius: 50%;
-    margin-right: 6px;
-    box-shadow: 0 0 6px var(--green);
-    animation: pulse-dot 2s ease-in-out infinite;
-  }
-  @keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
-  /* Responsive */
-  @media (max-width: 1024px) {
-    .dashboard {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .dashboard .card.wide { grid-column: span 2; }
-    .dashboard .card.full { grid-column: span 2; }
-  }
-  @media (max-width: 640px) {
-    .dashboard {
-      grid-template-columns: 1fr;
-    }
-    .dashboard .card.wide,
-    .dashboard .card.full { grid-column: span 1; }
-    .ascii-header pre { font-size: 5px; }
-    #app { padding: 10px; }
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--green-dark); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+/* Remove countdown button */
+.countdown-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px}
+.countdown-remove:hover{color:#ff6b6b}
 </style>
 </head>
 <body>
-
-<!-- Matrix Rain Background -->
 <canvas id="matrix-canvas"></canvas>
-
-<!-- Scanline Overlay -->
-<div class="scanlines"></div>
-
-<!-- Boot Sequence -->
-<div id="boot-screen">
-  <div id="boot-text"></div>
-</div>
-
-<!-- Main App -->
-<div id="app">
-  <!-- ASCII Header -->
-  <div class="ascii-header">
-    <pre>
+<div class="main">
+  <!-- ASCII Art Header -->
+  <pre class="ascii-header" id="ascii-art">
  ██████╗ ██████╗ ███╗   ███╗███╗   ███╗ █████╗ ███╗   ██╗██████╗
 ██╔════╝██╔═══██╗████╗ ████║████╗ ████║██╔══██╗████╗  ██║██╔══██╗
 ██║     ██║   ██║██╔████╔██║██╔████╔██║███████║██╔██╗ ██║██║  ██║
 ██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║
 ╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝
  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝
- ██████╗███████╗███╗   ██╗████████╗███████╗██████╗
-██╔════╝██╔════╝████╗  ██║╚══██╔══╝██╔════╝██╔══██╗
-██║     █████╗  ██╔██╗ ██║   ██║   █████╗  ██████╔╝
-██║     ██╔══╝  ██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗
-╚██████╗███████╗██║ ╚████║   ██║   ███████╗██║  ██║
- ╚═════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
-    </pre>
-  </div>
-  <div class="tagline">// Personal Mission Control //</div>
+           ██████╗███████╗███╗   ██╗████████╗███████╗██████╗
+          ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██╔════╝██╔══██╗
+          ██║     █████╗  ██╔██╗ ██║   ██║   █████╗  ██████╔╝
+          ██║     ██╔══╝  ██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗
+          ╚██████╗███████╗██║ ╚████║   ██║   ███████╗██║  ██║
+           ╚═════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
+  </pre>
 
-  <!-- Status Bar -->
-  <div class="status-bar">
-    <span><span class="status-dot"></span>SYSTEMS ONLINE</span>
-    <span id="status-uptime">UPTIME: 00:00:00</span>
-    <span id="status-session">SESSION: <span class="glow-cyan" id="session-id"></span></span>
-  </div>
+  <!-- Boot Sequence -->
+  <div class="boot-log" id="boot-log"></div>
 
-  <!-- Dashboard Grid -->
-  <div class="dashboard">
-
-    <!-- Clock Widget -->
+  <div class="grid">
+    <!-- Clock -->
     <div class="card">
-      <div class="card-title">System Clock</div>
-      <div class="clock-time" id="clock-time">00:00<span class="clock-seconds">:00</span></div>
-      <div class="clock-day" id="clock-day">---</div>
-      <div class="clock-date" id="clock-date">----/--/--</div>
-    </div>
-
-    <!-- Weather Widget -->
-    <div class="card">
-      <div class="card-title">Weather Intel</div>
-      <div id="weather-content">
-        <div class="weather-loading">⟳ Fetching weather data...</div>
+      <h2><span class="icon">⏰</span> SYSTEM CLOCK</h2>
+      <div class="clock-display">
+        <div class="clock-time" id="clock-time">00:00<span class="clock-seconds" id="clock-sec">00</span></div>
+        <div class="clock-date"><span class="clock-day" id="clock-day">---</span> · <span id="clock-date">---</span></div>
       </div>
     </div>
 
-    <!-- Network Info -->
+    <!-- Weather -->
     <div class="card">
-      <div class="card-title">Network Status</div>
-      <div id="net-content">
-        <div class="net-row">
-          <span class="net-label">Public IP</span>
-          <span class="net-value" id="net-ip">scanning...</span>
-        </div>
-        <div class="net-row">
-          <span class="net-label">Timezone</span>
-          <span class="net-value" id="net-tz">—</span>
-        </div>
-        <div class="net-row">
-          <span class="net-label">UTC Offset</span>
-          <span class="net-value" id="net-utc">—</span>
-        </div>
-        <div class="net-row">
-          <span class="net-label">Language</span>
-          <span class="net-value" id="net-lang">—</span>
-        </div>
-        <div class="net-row">
-          <span class="net-label">Online</span>
-          <span class="net-value" id="net-online" style="color:var(--green)">●</span>
-        </div>
+      <h2><span class="icon">🌤️</span> WEATHER</h2>
+      <div id="weather-content">
+        <div style="color:var(--muted);font-size:12px">Fetching weather data...</div>
       </div>
     </div>
 
     <!-- Quick Launch -->
-    <div class="card wide">
-      <div class="card-title">Quick Launch</div>
-      <div class="quick-grid" id="quick-grid"></div>
+    <div class="card grid-full">
+      <h2><span class="icon">🚀</span> QUICK LAUNCH <span style="font-size:10px;color:var(--muted);font-weight:normal;margin-left:auto">[1-9] keys</span></h2>
+      <div class="launch-grid" id="launch-grid"></div>
     </div>
 
-    <!-- Quotes -->
+    <!-- Motivational Quote -->
     <div class="card">
-      <div class="card-title">Transmission</div>
+      <h2><span class="icon">💡</span> QUOTE OF THE HOUR</h2>
       <div class="quote-text" id="quote-text">Loading...</div>
-      <div class="quote-author" id="quote-author">...</div>
+      <div class="quote-author" id="quote-author"></div>
     </div>
 
     <!-- Countdown Timer -->
     <div class="card">
-      <div class="card-title">Countdowns</div>
+      <h2><span class="icon">⏳</span> COUNTDOWNS</h2>
       <div class="countdown-list" id="countdown-list"></div>
       <div class="countdown-add">
         <input type="text" id="cd-name" placeholder="Event name">
         <input type="date" id="cd-date">
-        <button onclick="addCountdown()">+ ADD</button>
+        <button id="cd-add-btn">+ Add</button>
       </div>
     </div>
 
     <!-- Notes -->
-    <div class="card wide">
-      <div class="card-title">Scratchpad</div>
-      <textarea class="notes-area" id="notes" placeholder="Type notes here... auto-saved to localStorage"></textarea>
-      <div class="notes-status" id="notes-status">Ready</div>
+    <div class="card">
+      <h2><span class="icon">📝</span> SCRATCHPAD</h2>
+      <textarea class="notes-area" id="notes" placeholder="Type notes here... auto-saves"></textarea>
+      <div class="notes-meta">
+        <span id="notes-chars">0 chars</span>
+        <span id="notes-saved">—</span>
+      </div>
     </div>
 
+    <!-- Network & System Info -->
+    <div class="card">
+      <h2><span class="icon">🌐</span> NETWORK INFO</h2>
+      <div id="info-content">
+        <div class="info-row"><span class="info-label">Public IP</span><span class="info-value" id="info-ip">Fetching...</span></div>
+        <div class="info-row"><span class="info-label">Timezone</span><span class="info-value" id="info-tz">—</span></div>
+        <div class="info-row"><span class="info-label">UTC Offset</span><span class="info-value" id="info-utc">—</span></div>
+        <div class="info-row"><span class="info-label">User Agent</span><span class="info-value" id="info-ua" style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span></div>
+        <div class="info-row"><span class="info-label">Screen</span><span class="info-value" id="info-screen">—</span></div>
+        <div class="info-row"><span class="info-label">Online</span><span class="info-value" id="info-online" style="color:#00ff41">✓ Connected</span></div>
+      </div>
+    </div>
   </div>
 
-  <!-- Shortcuts Hint -->
-  <div class="shortcuts-hint">
-    <kbd>1</kbd>–<kbd>9</kbd> Quick Launch &nbsp;|&nbsp;
-    <kbd>Q</kbd> New Quote &nbsp;|&nbsp;
-    <kbd>N</kbd> Focus Notes &nbsp;|&nbsp;
-    <kbd>Esc</kbd> Unfocus
+  <div style="text-align:center;padding:30px 0 10px;font-size:11px;color:var(--dim)">
+    COMMAND CENTER v1.0 · Built by <span style="color:var(--green)">Turbo ⚡</span> · <span id="uptime"></span>
   </div>
 </div>
 
 <script>
-// ─── BOOT SEQUENCE ───────────────────────────────────────────────
-(function boot() {
-  const bootEl = document.getElementById('boot-text');
-  const lines = [
-    '> COMMAND CENTER v2.0.1',
-    '> Initializing kernel modules...',
-    '> Loading display driver.......... [OK]',
-    '> Mounting filesystem............. [OK]',
-    '> Network interface eth0.......... [ONLINE]',
-    '> Syncing clock with NTP.......... [OK]',
-    '> Fetching weather telemetry...... [OK]',
-    '> Loading quick-launch manifest... [OK]',
-    '> Decrypting scratchpad........... [OK]',
-    '> Countdown timers armed.......... [OK]',
-    '> Matrix rain shader compiled..... [OK]',
-    '> All systems nominal.',
-    '',
-    '> Welcome back, Operator.',
-    '> Starting dashboard...',
-  ];
-
-  let lineIdx = 0;
-  let charIdx = 0;
-  let current = '';
-  const speed = 12;
-  const lineDelay = 80;
-
-  function type() {
-    if (lineIdx >= lines.length) {
-      setTimeout(() => {
-        document.getElementById('boot-screen').classList.add('hidden');
-        document.getElementById('app').classList.add('visible');
-        initAll();
-      }, 600);
-      return;
-    }
-    const line = lines[lineIdx];
-    if (charIdx <= line.length) {
-      bootEl.textContent = current + line.slice(0, charIdx) + '█';
-      charIdx++;
-      setTimeout(type, speed);
-    } else {
-      current += line + '\n';
-      lineIdx++;
-      charIdx = 0;
-      setTimeout(type, lineDelay);
-    }
-  }
-  type();
-})();
-
-// ─── MATRIX RAIN ─────────────────────────────────────────────────
-(function matrixRain() {
+// ============================================
+// MATRIX RAIN BACKGROUND
+// ============================================
+(function(){
   const canvas = document.getElementById('matrix-canvas');
   const ctx = canvas.getContext('2d');
+  let cols, drops;
 
-  function resize() {
+  function resize(){
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    cols = Math.floor(canvas.width / 14);
+    drops = Array(cols).fill(1);
   }
   resize();
   window.addEventListener('resize', resize);
 
-  const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF<>/{}[]|;:+='.split('');
-  const fontSize = 14;
-  let columns = Math.floor(canvas.width / fontSize);
-  let drops = Array(columns).fill(1);
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*()ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘ';
 
-  window.addEventListener('resize', () => {
-    columns = Math.floor(canvas.width / fontSize);
-    drops = Array(columns).fill(1);
-  });
-
-  function draw() {
-    ctx.fillStyle = 'rgba(10, 10, 10, 0.06)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  function draw(){
+    ctx.fillStyle = 'rgba(10,10,10,0.05)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = '#00ff41';
-    ctx.font = fontSize + 'px monospace';
-
-    for (let i = 0; i < drops.length; i++) {
-      const char = chars[Math.floor(Math.random() * chars.length)];
-      ctx.fillText(char, i * fontSize, drops[i] * fontSize);
-      if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-        drops[i] = 0;
-      }
+    ctx.font = '12px monospace';
+    for(let i=0;i<cols;i++){
+      const char = chars[Math.floor(Math.random()*chars.length)];
+      ctx.fillText(char, i*14, drops[i]*14);
+      if(drops[i]*14 > canvas.height && Math.random() > 0.975) drops[i]=0;
       drops[i]++;
     }
     requestAnimationFrame(draw);
@@ -740,321 +246,292 @@
   draw();
 })();
 
-// ─── INIT ALL MODULES ─────────────────────────────────────────────
-function initAll() {
-  initClock();
-  initWeather();
-  initQuickLaunch();
-  initQuotes();
-  initCountdowns();
-  initNotes();
-  initNetwork();
-  initUptime();
-  initKeyboard();
-  document.getElementById('session-id').textContent = Math.random().toString(36).slice(2, 10).toUpperCase();
-}
-
-// ─── CLOCK ────────────────────────────────────────────────────────
-function initClock() {
-  function tick() {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const s = String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('clock-time').innerHTML = `${h}:${m}<span class="clock-seconds">:${s}</span>`;
-
-    const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
-    document.getElementById('clock-day').textContent = days[now.getDay()];
-
-    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    document.getElementById('clock-date').textContent =
-      `${now.getFullYear()} / ${months[now.getMonth()]} / ${String(now.getDate()).padStart(2,'0')}`;
-  }
-  tick();
-  setInterval(tick, 1000);
-}
-
-// ─── WEATHER ──────────────────────────────────────────────────────
-async function initWeather() {
-  const el = document.getElementById('weather-content');
-  try {
-    const resp = await fetch('https://wttr.in/?format=j1');
-    const data = await resp.json();
-    const curr = data.current_condition[0];
-    const area = data.nearest_area[0];
-    const forecast = data.weather.slice(0, 3);
-
-    const condIcons = {
-      'Sunny': '☀️', 'Clear': '🌙', 'Partly cloudy': '⛅', 'Cloudy': '☁️',
-      'Overcast': '☁️', 'Mist': '🌫️', 'Fog': '🌫️', 'Rain': '🌧️',
-      'Light rain': '🌦️', 'Heavy rain': '🌧️', 'Snow': '❄️', 'Thunderstorm': '⛈️',
-      'Patchy rain possible': '🌦️', 'Light drizzle': '🌦️',
-      'Moderate rain': '🌧️', 'Patchy light rain': '🌦️'
-    };
-    const desc = curr.weatherDesc[0].value;
-    const icon = condIcons[desc] || '🌡️';
-    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-    let forecastHTML = forecast.map(day => {
-      const d = new Date(day.date);
-      return `<div class="forecast-day">
-        <div class="day-name">${dayNames[d.getDay()]}</div>
-        <div class="day-temp">${day.maxtempF}°</div>
-        <div class="day-low">${day.mintempF}°</div>
-      </div>`;
-    }).join('');
-
-    el.innerHTML = `
-      <div class="weather-main">
-        <span class="weather-icon">${icon}</span>
-        <span class="weather-temp">${curr.temp_F}°F</span>
-      </div>
-      <div class="weather-condition">${desc} · Feels ${curr.FeelsLikeF}°F · 💧${curr.humidity}%</div>
-      <div class="weather-forecast">${forecastHTML}</div>
-      <div class="weather-location">📍 ${area.areaName[0].value}, ${area.region[0].value}</div>
-    `;
-  } catch (e) {
-    el.innerHTML = `<div class="weather-loading" style="color:var(--danger)">⚠ Weather unavailable</div>`;
-  }
-}
-
-// ─── QUICK LAUNCH ─────────────────────────────────────────────────
-function initQuickLaunch() {
-  const items = [
-    { icon: '🐙', label: 'GitHub', url: 'https://github.com' },
-    { icon: '📧', label: 'Gmail', url: 'https://mail.google.com' },
-    { icon: '▶️', label: 'YouTube', url: 'https://youtube.com' },
-    { icon: '🤖', label: 'Reddit', url: 'https://reddit.com' },
-    { icon: '🐦', label: 'Twitter', url: 'https://twitter.com' },
-    { icon: '💬', label: 'Discord', url: 'https://discord.com/app' },
-    { icon: '📋', label: 'Notion', url: 'https://notion.so' },
-    { icon: '🔍', label: 'Google', url: 'https://google.com' },
-    { icon: '📰', label: 'HN', url: 'https://news.ycombinator.com' },
+// ============================================
+// BOOT SEQUENCE
+// ============================================
+(function(){
+  const lines = [
+    '> Initializing systems...',
+    '> Loading modules... ████████████ OK',
+    '> Network: ONLINE',
+    '> Sensors: ACTIVE',
+    '> Command Center: READY ✓'
   ];
-
-  const grid = document.getElementById('quick-grid');
-  items.forEach((item, idx) => {
-    const a = document.createElement('a');
-    a.href = item.url;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.className = 'quick-item';
-    a.setAttribute('data-shortcut', idx + 1);
-    a.innerHTML = `
-      <span class="shortcut">${idx + 1}</span>
-      <span class="icon">${item.icon}</span>
-      <span class="label">${item.label}</span>
-    `;
-    grid.appendChild(a);
+  const el = document.getElementById('boot-log');
+  lines.forEach((line,i) => {
+    const span = document.createElement('span');
+    span.textContent = line + '  ';
+    span.style.animationDelay = (i * 0.4) + 's';
+    el.appendChild(span);
   });
-  window._quickItems = items;
-}
+})();
 
-// ─── QUOTES ───────────────────────────────────────────────────────
-const QUOTES = [
-  { text: "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.", author: "Martin Fowler" },
-  { text: "First, solve the problem. Then, write the code.", author: "John Johnson" },
-  { text: "The best way to predict the future is to invent it.", author: "Alan Kay" },
-  { text: "Talk is cheap. Show me the code.", author: "Linus Torvalds" },
-  { text: "Programs must be written for people to read, and only incidentally for machines to execute.", author: "Harold Abelson" },
-  { text: "The most dangerous phrase in the language is, 'We've always done it this way.'", author: "Grace Hopper" },
-  { text: "Simplicity is the soul of efficiency.", author: "Austin Freeman" },
-  { text: "Make it work, make it right, make it fast.", author: "Kent Beck" },
-  { text: "Code is like humor. When you have to explain it, it's bad.", author: "Cory House" },
-  { text: "The only way to learn a new programming language is by writing programs in it.", author: "Dennis Ritchie" },
-  { text: "It's not a bug — it's an undocumented feature.", author: "Anonymous" },
-  { text: "Perfection is achieved not when there is nothing more to add, but when there is nothing left to take away.", author: "Antoine de Saint-Exupéry" },
-  { text: "The computer was born to solve problems that did not exist before.", author: "Bill Gates" },
-  { text: "In theory, theory and practice are the same. In practice, they're not.", author: "Yogi Berra" },
-  { text: "Debugging is twice as hard as writing the code in the first place.", author: "Brian Kernighan" },
-  { text: "The function of good software is to make the complex appear to be simple.", author: "Grady Booch" },
-  { text: "Before software can be reusable it first has to be usable.", author: "Ralph Johnson" },
-  { text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.", author: "Aristotle" },
-  { text: "The only true wisdom is in knowing you know nothing.", author: "Socrates" },
-  { text: "Stay hungry, stay foolish.", author: "Steve Jobs" },
+// ============================================
+// CLOCK
+// ============================================
+function updateClock(){
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock-time').innerHTML = `${h}:${m}<span class="clock-seconds">${s}</span>`;
+  
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('clock-day').textContent = days[now.getDay()];
+  document.getElementById('clock-date').textContent = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ============================================
+// WEATHER
+// ============================================
+async function fetchWeather(){
+  try {
+    const res = await fetch('https://wttr.in/?format=j1');
+    const data = await res.json();
+    const current = data.current_condition[0];
+    const area = data.nearest_area[0];
+    const forecast = data.weather.slice(0,3);
+    
+    const tempF = current.temp_F;
+    const desc = current.weatherDesc[0].value;
+    const city = area.areaName[0].value;
+    const region = area.region[0].value;
+    
+    const weatherIcons = {'Sunny':'☀️','Clear':'🌙','Partly cloudy':'⛅','Cloudy':'☁️','Overcast':'☁️',
+      'Rain':'🌧️','Light rain':'🌦️','Heavy rain':'🌧️','Thunderstorm':'⛈️','Snow':'❄️','Fog':'🌫️',
+      'Mist':'🌫️','Drizzle':'🌦️'};
+    const icon = weatherIcons[desc] || '🌤️';
+    
+    let forecastHTML = forecast.map(d => {
+      const date = new Date(d.date);
+      const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()];
+      const hi = d.maxtempF;
+      const lo = d.mintempF;
+      const fDesc = d.hourly[4]?.weatherDesc[0]?.value || '';
+      const fIcon = weatherIcons[fDesc] || '🌤️';
+      return `<div class="forecast-day"><div class="day">${dayName}</div><div class="icon">${fIcon}</div><div class="temp">${hi}°/${lo}°</div></div>`;
+    }).join('');
+    
+    document.getElementById('weather-content').innerHTML = `
+      <div class="weather-main">
+        <span style="font-size:40px">${icon}</span>
+        <div>
+          <div class="weather-temp">${tempF}°F</div>
+          <div class="weather-desc">${desc}</div>
+          <div class="weather-location">📍 ${city}, ${region}</div>
+        </div>
+      </div>
+      <div class="forecast">${forecastHTML}</div>
+    `;
+  } catch(e) {
+    document.getElementById('weather-content').innerHTML = '<div style="color:var(--muted);font-size:12px">⚠ Weather unavailable</div>';
+  }
+}
+fetchWeather();
+setInterval(fetchWeather, 600000); // Refresh every 10 min
+
+// ============================================
+// QUICK LAUNCH
+// ============================================
+const LINKS = [
+  { name: 'GitHub', icon: '🐙', url: 'https://github.com' },
+  { name: 'Gmail', icon: '📧', url: 'https://mail.google.com' },
+  { name: 'YouTube', icon: '▶️', url: 'https://youtube.com' },
+  { name: 'Reddit', icon: '🤖', url: 'https://reddit.com' },
+  { name: 'Twitter', icon: '🐦', url: 'https://twitter.com' },
+  { name: 'ChatGPT', icon: '🧠', url: 'https://chat.openai.com' },
+  { name: 'Claude', icon: '🤗', url: 'https://claude.ai' },
+  { name: 'HN', icon: '📰', url: 'https://news.ycombinator.com' },
+  { name: 'Stack', icon: '📚', url: 'https://stackoverflow.com' },
 ];
 
-let quoteIdx = Math.floor(Math.random() * QUOTES.length);
+const launchGrid = document.getElementById('launch-grid');
+LINKS.forEach((link, i) => {
+  const a = document.createElement('a');
+  a.className = 'launch-item';
+  a.href = link.url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.innerHTML = `${i < 9 ? `<span class="launch-key">${i+1}</span>` : ''}<span class="l-icon">${link.icon}</span><span class="l-name">${link.name}</span>`;
+  launchGrid.appendChild(a);
+});
 
-function showQuote() {
-  const q = QUOTES[quoteIdx % QUOTES.length];
-  document.getElementById('quote-text').textContent = q.text;
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+  const n = parseInt(e.key);
+  if(n >= 1 && n <= 9 && LINKS[n-1]){
+    window.open(LINKS[n-1].url, '_blank');
+  }
+});
+
+// ============================================
+// QUOTES
+// ============================================
+const QUOTES = [
+  { text: 'The best way to predict the future is to invent it.', author: 'Alan Kay' },
+  { text: 'Talk is cheap. Show me the code.', author: 'Linus Torvalds' },
+  { text: 'Any fool can write code that a computer can understand. Good programmers write code that humans can understand.', author: 'Martin Fowler' },
+  { text: 'First, solve the problem. Then, write the code.', author: 'John Johnson' },
+  { text: 'Experience is the name everyone gives to their mistakes.', author: 'Oscar Wilde' },
+  { text: 'The only way to do great work is to love what you do.', author: 'Steve Jobs' },
+  { text: 'Simplicity is the soul of efficiency.', author: 'Austin Freeman' },
+  { text: 'Make it work, make it right, make it fast.', author: 'Kent Beck' },
+  { text: 'Code is like humor. When you have to explain it, it\'s bad.', author: 'Cory House' },
+  { text: 'The most dangerous phrase in the English language is "we\'ve always done it this way."', author: 'Grace Hopper' },
+  { text: 'Perfection is achieved not when there is nothing more to add, but when there is nothing left to take away.', author: 'Antoine de Saint-Exupéry' },
+  { text: 'Programs must be written for people to read, and only incidentally for machines to execute.', author: 'Harold Abelson' },
+  { text: 'It works on my machine.', author: 'Every Developer Ever' },
+  { text: 'There are only two hard things in Computer Science: cache invalidation and naming things.', author: 'Phil Karlton' },
+  { text: 'The computer was born to solve problems that did not exist before.', author: 'Bill Gates' },
+];
+
+function showQuote(){
+  const idx = Math.floor(Date.now() / 3600000) % QUOTES.length; // Changes hourly
+  const q = QUOTES[idx];
+  document.getElementById('quote-text').textContent = `"${q.text}"`;
   document.getElementById('quote-author').textContent = q.author;
 }
+showQuote();
+setInterval(showQuote, 60000);
 
-function nextQuote() {
-  quoteIdx++;
-  showQuote();
-}
+// ============================================
+// COUNTDOWNS
+// ============================================
+let countdowns = JSON.parse(localStorage.getItem('cc-countdowns') || '[]');
 
-function initQuotes() {
-  showQuote();
-  setInterval(nextQuote, 30000);
-}
-
-// ─── COUNTDOWNS ───────────────────────────────────────────────────
-function getCountdowns() {
-  try {
-    return JSON.parse(localStorage.getItem('cc_countdowns')) || [
-      { name: 'New Year 2026', date: '2026-01-01' },
-      { name: 'Summer Solstice', date: '2025-06-21' },
-    ];
-  } catch { return []; }
-}
-
-function saveCountdowns(list) {
-  localStorage.setItem('cc_countdowns', JSON.stringify(list));
-}
-
-function renderCountdowns() {
-  const list = getCountdowns();
-  const el = document.getElementById('countdown-list');
-  const now = new Date();
-
-  el.innerHTML = list.map((item, idx) => {
-    const target = new Date(item.date + 'T00:00:00');
+function renderCountdowns(){
+  const list = document.getElementById('countdown-list');
+  if(countdowns.length === 0){
+    list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">No countdowns set. Add one below!</div>';
+    return;
+  }
+  
+  list.innerHTML = countdowns.map((cd, i) => {
+    const target = new Date(cd.date);
+    const now = new Date();
     const diff = target - now;
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    const isPast = days < 0;
-    const display = isPast ? `${Math.abs(days)}d ago` : days === 0 ? 'TODAY!' : `${days}d`;
-
+    let timeStr;
+    
+    if(diff <= 0){
+      timeStr = '<span style="color:#ff6b6b">PASSED</span>';
+    } else {
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
+      if(days > 0) timeStr = `${days}d ${hours}h`;
+      else {
+        const mins = Math.floor((diff % 3600000) / 60000);
+        timeStr = `${hours}h ${mins}m`;
+      }
+    }
+    
     return `<div class="countdown-item">
-      <span class="countdown-name">${item.name}</span>
+      <span class="countdown-name">${escapeHtml(cd.name)}</span>
       <span>
-        <span class="countdown-value ${isPast ? 'past' : ''}">${display}</span>
-        <button class="countdown-remove" onclick="removeCountdown(${idx})" title="Remove">×</button>
+        <span class="countdown-time">${timeStr}</span>
+        <button class="countdown-remove" onclick="removeCountdown(${i})" title="Remove">✕</button>
       </span>
     </div>`;
   }).join('');
 }
 
-function addCountdown() {
+function addCountdown(){
   const name = document.getElementById('cd-name').value.trim();
   const date = document.getElementById('cd-date').value;
-  if (!name || !date) return;
-  const list = getCountdowns();
-  list.push({ name, date });
-  list.sort((a, b) => new Date(a.date) - new Date(b.date));
-  saveCountdowns(list);
-  renderCountdowns();
+  if(!name || !date) return;
+  countdowns.push({ name, date });
+  localStorage.setItem('cc-countdowns', JSON.stringify(countdowns));
   document.getElementById('cd-name').value = '';
   document.getElementById('cd-date').value = '';
-}
-
-function removeCountdown(idx) {
-  const list = getCountdowns();
-  list.splice(idx, 1);
-  saveCountdowns(list);
   renderCountdowns();
 }
 
-function initCountdowns() {
+window.removeCountdown = function(i){
+  countdowns.splice(i, 1);
+  localStorage.setItem('cc-countdowns', JSON.stringify(countdowns));
   renderCountdowns();
-  setInterval(renderCountdowns, 60000);
+};
+
+document.getElementById('cd-add-btn').addEventListener('click', addCountdown);
+renderCountdowns();
+setInterval(renderCountdowns, 60000);
+
+// ============================================
+// NOTES / SCRATCHPAD
+// ============================================
+const notesEl = document.getElementById('notes');
+notesEl.value = localStorage.getItem('cc-notes') || '';
+document.getElementById('notes-chars').textContent = `${notesEl.value.length} chars`;
+
+let saveTimeout;
+notesEl.addEventListener('input', () => {
+  document.getElementById('notes-chars').textContent = `${notesEl.value.length} chars`;
+  document.getElementById('notes-saved').textContent = 'saving...';
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    localStorage.setItem('cc-notes', notesEl.value);
+    document.getElementById('notes-saved').textContent = '✓ saved ' + new Date().toLocaleTimeString();
+  }, 500);
+});
+
+if(notesEl.value) {
+  document.getElementById('notes-saved').textContent = '✓ loaded from storage';
 }
 
-// ─── NOTES ────────────────────────────────────────────────────────
-function initNotes() {
-  const textarea = document.getElementById('notes');
-  const status = document.getElementById('notes-status');
-
-  textarea.value = localStorage.getItem('cc_notes') || '';
-
-  let saveTimeout;
-  textarea.addEventListener('input', () => {
-    status.textContent = 'Saving...';
-    status.style.color = 'var(--cyan)';
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-      localStorage.setItem('cc_notes', textarea.value);
-      status.textContent = `Saved @ ${new Date().toLocaleTimeString()}`;
-      status.style.color = 'var(--text-dim)';
-    }, 500);
-  });
-}
-
-// ─── NETWORK ──────────────────────────────────────────────────────
-async function initNetwork() {
-  // Timezone
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  document.getElementById('net-tz').textContent = tz;
-
-  // UTC Offset
-  const offset = new Date().getTimezoneOffset();
-  const sign = offset <= 0 ? '+' : '-';
-  const hrs = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
-  const mins = String(Math.abs(offset) % 60).padStart(2, '0');
-  document.getElementById('net-utc').textContent = `UTC${sign}${hrs}:${mins}`;
-
-  // Language
-  document.getElementById('net-lang').textContent = navigator.language || 'unknown';
-
-  // Online status
-  function updateOnline() {
-    const el = document.getElementById('net-online');
-    el.textContent = navigator.onLine ? '● CONNECTED' : '○ OFFLINE';
-    el.style.color = navigator.onLine ? 'var(--green)' : 'var(--danger)';
-  }
-  updateOnline();
-  window.addEventListener('online', updateOnline);
-  window.addEventListener('offline', updateOnline);
-
-  // Public IP
+// ============================================
+// NETWORK INFO
+// ============================================
+async function fetchIP(){
   try {
-    const resp = await fetch('https://api.ipify.org?format=json');
-    const data = await resp.json();
-    document.getElementById('net-ip').textContent = data.ip;
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    document.getElementById('info-ip').textContent = data.ip;
   } catch {
-    document.getElementById('net-ip').textContent = 'unavailable';
-    document.getElementById('net-ip').style.color = 'var(--danger)';
+    document.getElementById('info-ip').textContent = 'Unavailable';
   }
 }
+fetchIP();
 
-// ─── UPTIME ───────────────────────────────────────────────────────
-function initUptime() {
-  const start = Date.now();
-  function update() {
-    const elapsed = Math.floor((Date.now() - start) / 1000);
-    const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
-    const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
-    const s = String(elapsed % 60).padStart(2, '0');
-    document.getElementById('status-uptime').textContent = `UPTIME: ${h}:${m}:${s}`;
-  }
-  update();
-  setInterval(update, 1000);
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+document.getElementById('info-tz').textContent = tz;
+const offset = new Date().getTimezoneOffset();
+const offHrs = Math.abs(Math.floor(offset/60));
+const offMins = Math.abs(offset%60);
+document.getElementById('info-utc').textContent = `UTC${offset<=0?'+':'-'}${String(offHrs).padStart(2,'0')}:${String(offMins).padStart(2,'0')}`;
+document.getElementById('info-ua').textContent = navigator.userAgent.split(' ').slice(-2).join(' ');
+document.getElementById('info-screen').textContent = `${screen.width}×${screen.height} @ ${devicePixelRatio}x`;
+
+window.addEventListener('online', () => { document.getElementById('info-online').innerHTML = '<span style="color:#00ff41">✓ Connected</span>'; });
+window.addEventListener('offline', () => { document.getElementById('info-online').innerHTML = '<span style="color:#ff6b6b">✕ Offline</span>'; });
+
+// ============================================
+// UPTIME
+// ============================================
+const startTime = Date.now();
+function updateUptime(){
+  const diff = Date.now() - startTime;
+  const s = Math.floor(diff/1000) % 60;
+  const m = Math.floor(diff/60000) % 60;
+  const h = Math.floor(diff/3600000);
+  document.getElementById('uptime').textContent = `Uptime: ${h}h ${m}m ${s}s`;
+}
+setInterval(updateUptime, 1000);
+updateUptime();
+
+// ============================================
+// UTILITY
+// ============================================
+function escapeHtml(text){
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
 }
 
-// ─── KEYBOARD SHORTCUTS ──────────────────────────────────────────
-function initKeyboard() {
-  document.addEventListener('keydown', (e) => {
-    // Skip if typing in an input
-    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
-      if (e.key === 'Escape') e.target.blur();
-      return;
-    }
-
-    // Number keys: quick launch
-    const num = parseInt(e.key);
-    if (num >= 1 && num <= 9 && window._quickItems) {
-      const item = window._quickItems[num - 1];
-      if (item) window.open(item.url, '_blank');
-      return;
-    }
-
-    // Q: next quote
-    if (e.key === 'q' || e.key === 'Q') {
-      nextQuote();
-      return;
-    }
-
-    // N: focus notes
-    if (e.key === 'n' || e.key === 'N') {
-      document.getElementById('notes').focus();
-      e.preventDefault();
-      return;
-    }
-  });
-}
+console.log('%c COMMAND CENTER v1.0 ', 'background:#00ff41;color:#0a0a0a;font-weight:bold;padding:4px 8px;border-radius:4px');
+console.log('%c Systems Online ⚡ ', 'color:#0ff');
 </script>
 </body>
 </html>
